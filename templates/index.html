@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T20 Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --body-bg: #f4f7f6; --card-bg: #ffffff; --card-border: #e0e0e0;
+            --shadow-color: rgba(0,0,0,0.1); --bar-bg: #e9ecef; --text-strong: #212529;
+        }
+        [data-bs-theme="dark"] {
+            --body-bg: #121212; --card-bg: #1e1e1e; --card-border: #333;
+            --shadow-color: rgba(0,0,0,0.5); --bar-bg: #2a2a2a; --text-strong: #f8f9fa;
+        }
+
+        body { background-color: var(--body-bg); font-family: 'Segoe UI', sans-serif; transition: 0.4s; overflow: hidden; }
+        .main-container { max-width: 700px; margin-top: 10px; }
+        
+        .card { 
+            background-color: var(--card-bg); 
+            border: 1px solid var(--card-border); 
+            border-radius: 18px; 
+            box-shadow: 0 8px 25px var(--shadow-color); 
+            padding: 1.1rem !important; 
+        }
+        
+        #simulation-panel { display: none; }
+        
+        /* Win/Loss Bar Styling */
+        .prob-bar-container { height: 35px; border-radius: 20px; background-color: var(--bar-bg); overflow: hidden; border: 1px solid var(--card-border); }
+        .bar-win { background: linear-gradient(90deg, #146c43, #198754); transition: width 0.6s ease-in-out; }
+        .bar-loss { background: linear-gradient(90deg, #dc3545, #b02a37); transition: width 0.6s ease-in-out; }
+
+        .btn-ball { 
+            font-weight: 800; 
+            width: 55px; 
+            height: 55px; 
+            font-size: 1.1rem; 
+            border-radius: 50%; 
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s; 
+            box-shadow: 0 4px 10px var(--shadow-color); 
+        }
+        .btn-ball:hover { transform: translateY(-3px); }
+        .btn-run { color: var(--text-strong); border: 2px solid var(--text-strong); background: transparent; }
+        .btn-run:hover { background-color: var(--text-strong); color: var(--card-bg); }
+
+        .display-score { font-size: 3.8rem; font-weight: 900; margin-bottom: 0; line-height: 1.1; }
+        .theme-switch-wrapper { position: absolute; top: 15px; right: 25px; display: flex; align-items: center; gap: 10px; }
+        .dynamic-text-strong { color: var(--text-strong); }
+        
+        #end-game-action { display: none; }
+        
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); color: #6ea8fe; } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.4s ease-out; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<div class="theme-switch-wrapper z-3">
+    <span class="fs-5" id="theme-icon">🌙</span>
+    <div class="form-check form-switch fs-5 mb-0">
+        <input class="form-check-input shadow-none" type="checkbox" role="switch" id="themeToggle" checked>
+    </div>
+</div>
+
+<div class="container main-container pt-1">
+    <h3 class="text-center mb-3 text-primary fw-bold">🏏 Win Predictor</h3>
+
+    <div class="card mb-3" id="setup-panel">
+        <h5 class="mb-3 text-secondary fw-bold">Match Settings</h5>
+        <div class="row g-2">
+            <div class="col-6"><label class="form-label fw-bold small">Target</label><input type="number" id="target" class="form-control" value="185"></div>
+            <div class="col-6"><label class="form-label fw-bold small">Score</label><input type="number" id="current_score" class="form-control" value="0"></div>
+            <div class="col-6"><label class="form-label fw-bold small">Wickets Left</label><input type="number" id="wickets_left" class="form-control" value="10"></div>
+            <div class="col-6"><label class="form-label fw-bold small">Balls Left</label><input type="number" id="balls_left" class="form-control" value="120"></div>
+        </div>
+        <button class="btn btn-primary btn-lg mt-3 w-100 fw-bold" onclick="startSimulation()">🚀 Start Simulation</button>
+    </div>
+
+    <div id="simulation-panel">
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-end mb-1 px-1 fw-bold text-uppercase small">
+                <div class="text-success">Chasing <span id="win-prob-text" class="fs-4 dynamic-text-strong d-block">50%</span></div>
+                <div class="text-danger text-end">Defending <span id="loss-prob-text" class="fs-4 dynamic-text-strong d-block">50%</span></div>
+            </div>
+            <div class="progress prob-bar-container">
+                <div id="win-bar" class="progress-bar bar-win" style="width: 50%;"></div>
+                <div id="loss-bar" class="progress-bar bar-loss" style="width: 50%;"></div>
+            </div>
+        </div>
+
+        <div class="card text-center">
+            <h1 class="display-score">
+                <span id="display-score" class="text-primary">0</span>/<span id="display-wickets-lost" class="text-danger">0</span>
+            </h1>
+            <h5 class="text-secondary mb-2">Target: <span id="display-target" class="dynamic-text-strong">185</span> | <span id="display-balls" class="dynamic-text-strong">120</span> Balls Left</h5>
+            
+            <div class="d-flex justify-content-center gap-2 mb-2">
+                <span class="badge bg-info text-dark py-1 px-2">Needed: <span id="display-runs-left">0</span></span>
+                <span class="badge bg-secondary py-1 px-2">CRR: <span id="display-crr">0.00</span></span>
+                <span class="badge bg-secondary py-1 px-2">RRR: <span id="display-rrr">0.00</span></span>
+            </div>
+            
+            <h3 id="match-message" class="text-success fw-bold my-1"></h3>
+            
+            <hr class="my-2" style="border-color: var(--card-border); border-width: 1px;">
+            
+            <div id="controls-area">
+                <div class="d-flex justify-content-center flex-nowrap gap-2 mb-2">
+                    <button class="btn btn-run btn-ball" onclick="playBall(0)">0</button>
+                    <button class="btn btn-run btn-ball" onclick="playBall(1)">1</button>
+                    <button class="btn btn-run btn-ball" onclick="playBall(2)">2</button>
+                    <button class="btn btn-run btn-ball" onclick="playBall(3)">3</button>
+                    <button class="btn btn-outline-primary btn-ball" onclick="playBall(4)">4</button>
+                    <button class="btn btn-outline-success btn-ball" onclick="playBall(6)">6</button>
+                    <button class="btn btn-danger btn-ball px-2 w-auto rounded-3" style="min-width: 70px;" onclick="playWicket()">Wicket</button>
+                    <button class="btn btn-warning btn-ball px-2 w-auto rounded-3 text-dark" style="min-width: 90px;" onclick="playExtra(1)">Wide/NB</button>
+                </div>
+                <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-outline-danger w-50 fw-bold py-2" onclick="undoLastBall()">↩️ Undo</button>
+                    <button class="btn btn-secondary w-50 fw-bold py-2" onclick="restartApp()">🔄 Restart</button>
+                </div>
+            </div>
+
+            <div id="end-game-action">
+                <button class="btn btn-success btn-lg w-100 fw-bold py-3 fs-4 shadow" onclick="restartApp()">🎉 START NEW MATCH</button>
+                <button class="btn btn-outline-secondary w-100 mt-2 fw-bold btn-sm" onclick="undoLastBall()">Mistake? Go Back</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Theme and Toggle Logic
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    function applyTheme() {
+        if (themeToggle.checked) { htmlElement.setAttribute('data-bs-theme', 'dark'); document.getElementById('theme-icon').innerText = '🌙'; }
+        else { htmlElement.setAttribute('data-bs-theme', 'light'); document.getElementById('theme-icon').innerText = '☀️'; }
+    }
+    themeToggle.addEventListener('change', applyTheme); applyTheme();
+
+    let state = {}; let stateHistory = [];
+    function triggerAnimation(id, cls) { const el = document.getElementById(id); el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+    function startSimulation() {
+        state = {
+            target: parseInt(document.getElementById('target').value),
+            current_score: parseInt(document.getElementById('current_score').value),
+            wickets_left: parseInt(document.getElementById('wickets_left').value),
+            balls_left: parseInt(document.getElementById('balls_left').value)
+        };
+        stateHistory = [];
+        document.getElementById('setup-panel').style.display = 'none';
+        document.getElementById('simulation-panel').style.display = 'block';
+        updateUI();
+    }
+
+    function saveState() { stateHistory.push({ ...state }); }
+    function playBall(r) { if(state.balls_left > 0 && state.current_score < state.target && state.wickets_left > 0) { saveState(); state.current_score += r; state.balls_left -= 1; updateUI(true); } }
+    function playWicket() { if(state.balls_left > 0 && state.wickets_left > 0) { saveState(); state.wickets_left -= 1; state.balls_left -= 1; triggerAnimation('display-wickets-lost', 'animate-pop'); updateUI(true); } }
+    function playExtra(r) { if(state.current_score < state.target) { saveState(); state.current_score += r; updateUI(true); } }
+    function undoLastBall() { if (stateHistory.length > 0) { state = stateHistory.pop(); updateUI(true); } }
+    function restartApp() { location.reload(); }
+
+    function updateBar(win, loss) {
+        document.getElementById('win-prob-text').innerText = win + '%';
+        document.getElementById('loss-prob-text').innerText = loss + '%';
+        document.getElementById('win-bar').style.width = win + '%';
+        document.getElementById('loss-bar').style.width = loss + '%';
+    }
+
+    function updateUI(animate = false) {
+        document.getElementById('display-score').innerText = state.current_score;
+        document.getElementById('display-wickets-lost').innerText = 10 - state.wickets_left;
+        document.getElementById('display-target').innerText = state.target;
+        document.getElementById('display-balls').innerText = state.balls_left;
+        document.getElementById('display-runs-left').innerText = Math.max(0, state.target - state.current_score);
+        if (animate) triggerAnimation('display-score', 'animate-pop');
+
+        const messageEl = document.getElementById('match-message');
+        const controls = document.getElementById('controls-area');
+        const endAction = document.getElementById('end-game-action');
+
+        let isOver = false;
+        if (state.current_score >= state.target) {
+            isOver = true; messageEl.innerText = "🎉 Chasing Team Won!"; updateBar(100, 0);
+        } else if (state.wickets_left <= 0) {
+            isOver = true; messageEl.innerText = "❌ Defending Team Won!"; updateBar(0, 100);
+        } else if (state.balls_left <= 0) {
+            isOver = true; messageEl.innerText = "⏰ Defending Team Won!"; updateBar(0, 100);
+        }
+
+        if(isOver) {
+            controls.style.display = 'none';
+            endAction.style.display = 'block';
+            triggerAnimation('match-message', 'animate-pop');
+            return;
+        } else {
+            controls.style.display = 'block';
+            endAction.style.display = 'none';
+            messageEl.innerText = "";
+        }
+
+        // Feature Engineering and API Call
+        fetch('/predict', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state)
+        })
+        .then(res => res.json())
+        .then(data => {
+            updateBar(data.win_prob, data.loss_prob);
+            document.getElementById('display-crr').innerText = data.crr.toFixed(2);
+            document.getElementById('display-rrr').innerText = data.rrr.toFixed(2);
+        });
+    }
+</script>
+</body> 
+</html>

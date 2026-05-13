@@ -1,0 +1,26 @@
+# Dataset
+ball_by_ball_it20.csv
+
+# Virtual environment
+venv/
+
+# Trained model & scaler (generated files)
+model_ann.keras
+scaler.pkl
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini
