@@ -1,6 +1,10 @@
 # Dataset
 ball_by_ball_it20.csv
 
+# Media files (hosted externally)
+demo.gif
+*.gif
+
 # Virtual environment
 venv/
 

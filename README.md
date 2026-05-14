@@ -2,6 +2,10 @@
 
 A machine learning project predicting chasing team win probability in T20 cricket using real-time match metrics and a neural network.
 
+## Demo
+
+![T20 Match Predictor Demo](https://github.com/sheralisaleem/T20-Cricket-Win-Predictor/releases/download/v1.0/demo.gif)
+
 ## Features
 
 ✅ **Deep Learning Model** - ANN with 2 hidden layers predicting win probabilities  
